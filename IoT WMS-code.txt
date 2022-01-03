@@ -1,0 +1,89 @@
+float val, voltage, temp;
+int gas =0;
+
+ // SSID to connect to
+String ssid     = "Simulator Wifi"; 
+
+//virtual wifi has no password 
+String password = ""; 
+
+// Open Weather Map API
+String host     = "api.thingspeak.com"; 
+const int httpPort   = 80;
+
+//Replace XXXXXXXXXXXXXXXX by your ThingSpeak Channel API Key
+String url     = "/update?api_key=VAH0R9BZG454UNNI&field1=";
+
+void setupESP8266(void) {
+  
+  // Start our ESP8266 Serial Communication
+ // Serial connection over USB to computer
+  Serial.begin(115200); 
+
+// Serial connection on Tx / Rx port to ESP8266 
+  Serial.println("AT");   
+
+ // Wait a little for the ESP to respond
+  delay(10);       
+  if (Serial.find("OK"))
+    Serial.println("ESP8266 OK!!!");
+    
+  // Connect to Simulator Wifi
+  Serial.println("AT+CWJAP=\"" + ssid + "\",\"" + password + "\"");
+
+// Wait a little for the ESP to respond
+  delay(10);        
+  if (Serial.find("OK"))
+    Serial.println("Connected to WiFi!!!");
+  
+  // Open TCP connection to the host:
+  //ESP8266 connects to the server as a TCP client. 
+
+  Serial.println("AT+CIPSTART=\"TCP\",\"" + host + "\"," + httpPort);
+
+ // Wait a little for the ESP to respond
+  delay(50);       
+  if (Serial.find("OK")) 
+   Serial.println("ESP8266 Connected to server!!!") ;
+ 
+}
+
+void anydata(void) {
+  
+  val=analogRead(A0);
+  voltage=val*0.0048828125; 
+  temp = (voltage - 0.5) * 100.0;
+  gas = analogRead(A1);
+   
+  // Construct our HTTP call
+  String httpPacket = "GET " + url + String(temp) + "&field2="+ String(gas) + " HTTP/1.1\r\nHost: " + host + "\r\n\r\n";
+  int length = httpPacket.length();
+  
+  // Send our message length
+  Serial.print("AT+CIPSEND=");
+  Serial.println(length);
+  delay(10); // Wait a little for the ESP to respond if (!Serial.find(">")) return -1;
+
+  // Send our http request
+  Serial.print(httpPacket);
+  delay(10); // Wait a little for the ESP to respond
+  if (Serial.find("SEND OK\r\n"))
+    Serial.println("ESP8266 sends data to the server");
+    
+}
+
+
+void setup() {
+  pinMode(A0, INPUT);
+  pinMode(A1, INPUT);
+  setupESP8266();
+               
+}
+
+void loop() {
+  
+ anydata();
+
+  // delay changed for faster analytics
+  delay(4000); 
+}
